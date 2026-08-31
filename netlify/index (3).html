@@ -426,6 +426,7 @@
         <button class="nav-item" data-view="days"><span>◫</span>Journées</button>
         <div class="nav-divider admin-only" id="settingsDivider"></div>
         <p class="nav-label admin-only" id="settingsLabel">Réglages</p>
+        <button class="nav-item admin-only" id="remunNav" data-view="remuneration"><span>💰</span>Rémunération</button>
         <button class="nav-item admin-only" id="adminNav" data-view="admin"><span>⚙</span>Administration</button>
         <div class="nav-day">
           <small>Journée en cours</small>
@@ -506,7 +507,12 @@
             </section>
           </div>
         </section>
-      </div>
+        <section class="view" id="remunerationView">
+          <div class="page-head"><div><p class="eyebrow">Gestion des rémunérations</p><h2>Rémunération de l'équipe</h2><p class="page-desc">Définissez un pourcentage de CA pour chaque utilisateur et gérez les primes.</p></div></div>
+          <section class="panel admin-section" style="max-width:none"><h3>Configuration des rémunérations</h3><p>Saisissez le pourcentage du chiffre d'affaires à verser à chaque membre de l'équipe.</p>
+            <div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>% du CA</th><th>Prime fixe ($)</th><th>CA généré</th><th>Rémunération estimée</th><th>Action</th></tr></thead><tbody id="remunerationTable"></tbody></table></div>
+          </section>
+        </section>      </div>
     </div>
   </main>
 
@@ -527,6 +533,12 @@
       user: { name: 'Administrateur', role: 'Administrateur', initial: 'A' },
       roles: ['Administrateur', 'Caissier', 'Barman', 'Barmaid'],
       activeView: 'sale', payment: 'Espèces', cart: {}, dayOpen: true,
+      remuneration: {
+        1: { percentage: 0, bonus: 0 },
+        2: { percentage: 5, bonus: 0 },
+        3: { percentage: 5, bonus: 0 },
+        4: { percentage: 5, bonus: 0 },
+      },
       products: [
         { id: 1, name: 'Bière pression', price: 500, icon: '🍺', stock: 1, active: true },
         { id: 2, name: 'Cidre', price: 600, icon: '🍏', stock: 1, active: true },
@@ -567,6 +579,7 @@
           users: Array.isArray(parsed.users) ? parsed.users : structuredClone(defaultState.users),
           orders: Array.isArray(parsed.orders) ? parsed.orders : structuredClone(defaultState.orders),
           days: Array.isArray(parsed.days) ? parsed.days : structuredClone(defaultState.days),
+          remuneration: parsed.remuneration ? { ...structuredClone(defaultState.remuneration), ...parsed.remuneration } : structuredClone(defaultState.remuneration),
         };
       } catch (error) {
         console.warn('Impossible de charger la sauvegarde locale:', error);
@@ -614,6 +627,7 @@
           users: Array.isArray(shared.users) ? shared.users : structuredClone(defaultState.users),
           orders: Array.isArray(shared.orders) ? shared.orders : structuredClone(defaultState.orders),
           days: Array.isArray(shared.days) ? shared.days : structuredClone(defaultState.days),
+          remuneration: shared.remuneration ? { ...structuredClone(defaultState.remuneration), ...shared.remuneration } : structuredClone(defaultState.remuneration),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       }
@@ -683,6 +697,12 @@
         ['Quantités vendues', stats.quantities, 'Toutes boissons', '◉'],
         ['Panier moyen', money(average), 'Par commande', '◈'],
       ];
+      if (state.user.role !== 'Administrateur') {
+        const userRemu = state.remuneration[state.user.id] || { percentage: 0, bonus: 0 };
+        const userRevenue = validOrders().filter(order => order.seller === state.user.name).reduce((sum, order) => sum + orderTotal(order), 0);
+        const userPay = Math.round(userRevenue * userRemu.percentage / 100 + userRemu.bonus * 100) / 100;
+        statData.push(['Votre rémunération', money(userPay), 'Salaire prévu', '💰']);
+      }
       el('statsGrid').innerHTML = statData.map(([label, value, help, symbol]) => `<article class="stat-card" data-symbol="${symbol}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-help">${help}</div></article>`).join('');
       const bars = stats.byProduct.slice(0, 5); const max = bars[0]?.total || 1;
       el('revenueBars').innerHTML = bars.length ? bars.map(({product, total}) => `<div class="bar-row"><span class="bar-label">${product.name}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8, Math.round(total/max*100))}%"></div></div><span class="bar-value">${money(total)}</span></div>`).join('') : '<p class="help">Aucune vente enregistrée aujourd’hui.</p>';
@@ -736,6 +756,24 @@
       }
     }
 
+    function userRevenue(userId, date = isoToday) {
+      return validOrders(date).filter(order => order.seller === state.users.find(u => u.id === Number(userId))?.name).reduce((sum, order) => sum + orderTotal(order), 0);
+    }
+
+    function renderRemuneration() {
+      el('remunerationTable').innerHTML = state.users.map(user => {
+        const config = state.remuneration[user.id] || { percentage: 0, bonus: 0 };
+        const revenue = userRevenue(user.id);
+        const calculatedPay = Math.round(revenue * config.percentage / 100 + config.bonus * 100) / 100;
+        return `<tr><td><span class="avatar">${user.initial}</span> <b>${user.name}</b></td><td>${user.role}</td>
+          <td><input class="stock-input" style="max-width: 80px;" data-remu-percent="${user.id}" type="number" min="0" max="100" step="0.5" value="${config.percentage}"></td>
+          <td><input class="stock-input" style="max-width: 80px;" data-remu-bonus="${user.id}" type="number" min="0" step="1" value="${config.bonus}"></td>
+          <td class="order-total">${money(revenue)}</td>
+          <td class="order-total" style="color: #a6d686; font-weight: 750;">${money(calculatedPay)}</td>
+          <td><button class="btn small" data-save-remu="${user.id}">✓ Valider</button></td></tr>`;
+      }).join('');
+    }
+
     function renderAll() {
       saveState();
       renderLoginUsers();
@@ -744,6 +782,7 @@
       renderOrders();
       renderDays();
       renderAdmin();
+      renderRemuneration();
     }
     function isAdmin() { return state.user.role === 'Administrateur'; }
     function applyRoleAccess() { document.querySelectorAll('.admin-only').forEach(item => item.classList.toggle('hidden', !isAdmin())); }
@@ -811,8 +850,18 @@
     el('userForm').addEventListener('submit', event => { event.preventDefault(); if (!isAdmin()) return; const name = el('newUserName').value.trim(); const pin = el('newUserPin').value; const role = el('newUserRole').value; if (!name || !/^\d{4}$/.test(pin)) { toast('Saisissez un nom et un PIN de 4 chiffres.', true); return; } if (!state.roles.includes(role)) { toast('Sélectionnez un rôle valide.', true); return; } state.users.push({ id: Date.now(), name, role, pin, initial: name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase() || name[0].toUpperCase() }); event.target.reset(); renderAll(); toast(`Compte de ${name} créé.`); });
     el('usersList').addEventListener('click', event => { if (!isAdmin()) return; const edit = event.target.closest('[data-edit-user]'); const del = event.target.closest('[data-delete-user]'); if (edit) { const user = state.users.find(item => item.id === Number(edit.dataset.editUser)); if (!user) return; const nextName = prompt(`Nom complet pour ${user.name}`, user.name); if (nextName === null) return; const trimmedName = nextName.trim(); if (!trimmedName) { toast('Le nom ne peut pas être vide.', true); return; } const roleChoices = state.roles.join(', ');
       const nextRole = prompt(`Rôle pour ${trimmedName} (${roleChoices})`, user.role); if (nextRole === null) return; const cleanRole = nextRole.trim(); if (!state.roles.includes(cleanRole)) { toast('Le rôle sélectionné n’existe pas.', true); return; } const nextPin = prompt(`Nouveau PIN à 4 chiffres pour ${trimmedName}`, user.pin); if (nextPin === null) return; if (!/^\d{4}$/.test(nextPin)) { toast('Le PIN doit comporter 4 chiffres.', true); return; } user.name = trimmedName; user.role = cleanRole; user.pin = nextPin; user.initial = trimmedName.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase() || trimmedName[0].toUpperCase(); renderAll(); toast(`Profil de ${trimmedName} mis à jour.`); return; } if (del) { const user = state.users.find(item => item.id === Number(del.dataset.deleteUser)); if (!user) return; const confirmDelete = confirm(`Supprimer l’utilisateur ${user.name} ?`); if (!confirmDelete) return; state.users = state.users.filter(item => item.id !== Number(del.dataset.deleteUser)); if (state.user && state.user.id === user.id) { state.user = { ...structuredClone(defaultState.user) }; } renderAll(); toast(`${user.name} a été supprimé.`); } });
-    el('passwordHint').addEventListener('click', () => toast('Utilisez le bouton ✎ pour modifier le nom, le rôle ou le PIN d’un compte.'));
-    el('todayLabel').textContent = frenchDate.format(today);
+    el('passwordHint').addEventListener('click', () => toast('Utilisez le bouton ✎ pour modifier le nom, le rôle ou le PIN d’un compte.'));    el('remunerationTable').addEventListener('click', event => {
+      if (!isAdmin()) return;
+      const button = event.target.closest('[data-save-remu]');
+      if (!button) return;
+      const userId = Number(button.dataset.saveRemu);
+      const percent = Number(el('remunerationTable').querySelector(`[data-remu-percent="${userId}"]`).value) || 0;
+      const bonus = Number(el('remunerationTable').querySelector(`[data-remu-bonus="${userId}"]`).value) || 0;
+      if (percent < 0 || percent > 100 || bonus < 0) { toast('Valeurs invalides. Le % doit être entre 0 et 100, et la prime positive.', true); return; }
+      state.remuneration[userId] = { percentage: percent, bonus };
+      renderAll();
+      toast(`Rémunération de ${state.users.find(u => u.id === userId)?.name} mise à jour.`);
+    });    el('todayLabel').textContent = frenchDate.format(today);
     renderLoginUsers();
     void hydrateState();
   </script>
