@@ -635,11 +635,6 @@
     };
 
     const saveState = () => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (error) {
-        console.warn('Impossible de sauvegarder dans le navigateur:', error);
-      }
       void saveSharedState();
     };
 
