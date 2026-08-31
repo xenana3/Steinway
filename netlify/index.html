@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#090c09">
+  <title>Steinway — Gestion des boissons</title>
+  <style>
+    :root {
+      --ink: #f7ead0;
+      --muted: #bcae91;
+      --gold: #d6a643;
+      --gold-light: #f3d47a;
+      --gold-dark: #825515;
+      --green: #0e3625;
+      --green-deep: #081c14;
+      --panel: rgba(10, 29, 19, .92);
+      --panel-strong: #0a2116;
+      --line: rgba(214, 166, 67, .52);
+      --danger: #e56e62;
+      --success: #83c38a;
+      --shadow: 0 18px 55px rgba(0, 0, 0, .4);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #090c09; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 4%, rgba(43, 102, 59, .22), transparent 27rem),
+        radial-gradient(circle at 92% 66%, rgba(159, 111, 22, .11), transparent 28rem),
+        linear-gradient(125deg, rgba(255,255,255,.025) 25%, transparent 25%) 0 0 / 12px 12px,
+        #090c09;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .ornament {
+      color: var(--gold);
+      font-family: Georgia, "Times New Roman", serif;
+      letter-spacing: .18em;
+      text-align: center;
+      font-size: .78rem;
+    }
+    .ornament::before, .ornament::after { content: "✦"; margin: 0 .65rem; color: #5d8e43; }
+
+    /* Connexion */
+    #loginScreen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    #loginScreen::before, #loginScreen::after {
+      content: "☘";
+      position: absolute;
+      color: rgba(214,166,67,.08);
+      font: 16rem Georgia, serif;
+      line-height: 1;
+      transform: rotate(-18deg);
+      pointer-events: none;
+    }
+    #loginScreen::before { top: -56px; left: -48px; }
+    #loginScreen::after { right: -62px; bottom: -72px; transform: rotate(21deg); }
+    .login-card {
+      width: min(100%, 440px);
+      position: relative;
+      z-index: 1;
+      padding: clamp(28px, 7vw, 48px);
+      background: linear-gradient(145deg, rgba(19, 48, 32, .98), rgba(5, 16, 10, .98));
+      border: 1px solid var(--gold);
+      border-radius: 28px;
+      box-shadow: inset 0 0 0 4px rgba(7, 14, 9, .9), inset 0 0 0 5px rgba(214,166,67,.55), var(--shadow);
+    }
+    .brand-mark { text-align: center; margin-bottom: 30px; }
+    .brand-mark .clover { display: block; color: #7a9e42; font: 3rem Georgia, serif; height: 48px; }
+    .brand-mark h1, .brand-name {
+      margin: 0;
+      color: var(--gold-light);
+      font: 700 clamp(2.35rem, 10vw, 3.3rem)/.86 Georgia, "Times New Roman", serif;
+      letter-spacing: .04em;
+      text-shadow: 0 2px 0 #68420f, 0 4px 20px rgba(0,0,0,.75);
+    }
+    .brand-mark p { margin: 10px 0 0; color: var(--muted); font: .72rem/1.3 Georgia, serif; letter-spacing: .25em; text-transform: uppercase; }
+    .login-card h2 { font: 600 1.25rem Georgia, serif; text-align: center; margin: 0 0 7px; }
+    .login-card .intro { text-align: center; color: var(--muted); font-size: .88rem; margin: 0 0 24px; }
+    .field { display: grid; gap: 7px; margin-top: 15px; }
+    .field label { color: var(--gold-light); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    .field input, .field select {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 14px;
+      color: var(--ink);
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(214,166,67,.52);
+      border-radius: 11px;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: var(--gold-light); box-shadow: 0 0 0 3px rgba(214,166,67,.14); }
+    .pin { letter-spacing: .45em; font-size: 1.1rem; }
+    .btn {
+      min-height: 44px;
+      padding: 0 16px;
+      color: #201605;
+      border: 1px solid #f7d981;
+      border-radius: 11px;
+      background: linear-gradient(180deg, #f4d376, #bd8527);
+      box-shadow: inset 0 1px rgba(255,255,255,.5), 0 5px 15px rgba(0,0,0,.2);
+      font-weight: 750;
+      letter-spacing: .01em;
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:active { transform: translateY(1px); }
+    .btn.full { width: 100%; margin-top: 23px; }
+    .btn.ghost { color: var(--gold-light); background: transparent; border-color: var(--line); box-shadow: none; }
+    .btn.danger { color: #fff2ec; background: #87362e; border-color: #d47b72; }
+    .btn.small { min-height: 35px; padding: 0 11px; font-size: .82rem; }
+    .login-note { color: #8e9d85; font-size: .73rem; text-align: center; margin: 18px 0 0; }
+
+    /* Application */
+    #appScreen { min-height: 100vh; }
+    .topbar {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 11px max(18px, env(safe-area-inset-right)) 11px max(18px, env(safe-area-inset-left));
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(7, 15, 10, .94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+    .top-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .top-brand .mini-clover { color: #6e9d46; font: 1.85rem Georgia, serif; }
+    .top-brand .brand-name { font-size: 1.65rem; white-space: nowrap; }
+    .top-brand .sub { color: var(--muted); font: .61rem Georgia, serif; letter-spacing: .18em; text-transform: uppercase; white-space: nowrap; }
+    .status-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+    .status { display: flex; align-items: center; gap: 6px; color: #cfe0c2; font-size: .78rem; white-space: nowrap; }
+    .status i { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); }
+    .user-menu { display: flex; align-items: center; gap: 8px; padding-left: 10px; border-left: 1px solid rgba(214,166,67,.28); }
+    .avatar { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--gold); border-radius: 50%; color: var(--gold-light); font: bold 1rem Georgia, serif; }
+    .user-label { display: grid; font-size: .73rem; color: var(--muted); }
+    .user-label strong { color: var(--ink); font-size: .8rem; }
+
+    .app-layout { max-width: 1500px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 74px); }
+    .side-nav { padding: 22px 13px; border-right: 1px solid rgba(214,166,67,.24); background: rgba(5, 15, 10, .35); }
+    .nav-label { margin: 0 12px 10px; color: #8f896f; font-size: .62rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    .nav-item {
+      width: 100%; min-height: 47px; display: flex; align-items: center; gap: 11px; padding: 0 13px; margin: 3px 0;
+      border: 1px solid transparent; border-radius: 10px; color: var(--muted); background: transparent; text-align: left; font-size: .9rem;
+    }
+    .nav-item span { width: 20px; text-align: center; color: var(--gold); font-size: 1.1rem; }
+    .nav-item.active { color: var(--gold-light); background: linear-gradient(90deg, rgba(213,162,59,.22), transparent); border-color: rgba(214,166,67,.42); }
+    .nav-item:hover { color: var(--ink); background: rgba(255,255,255,.03); }
+    .nav-divider { height: 1px; margin: 18px 10px; background: rgba(214,166,67,.22); }
+    .nav-day { margin: 0 10px; padding: 12px; border: 1px solid rgba(214,166,67,.3); border-radius: 12px; background: rgba(17,55,35,.37); }
+    .nav-day small { display: block; color: var(--muted); font-size: .69rem; margin-bottom: 4px; }
+    .nav-day strong { color: var(--gold-light); font: 1.06rem Georgia, serif; }
+    .nav-day button { padding: 0; color: #e7bb74; background: transparent; border: 0; font-size: .72rem; text-decoration: underline; margin-top: 9px; }
+
+    .content { min-width: 0; padding: clamp(19px, 3vw, 34px); }
+    .view { display: none; animation: appear .28s ease; }
+    .view.active { display: block; }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .eyebrow { margin: 0 0 5px; color: #86a976; font-size: .7rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    h2 { margin: 0; color: var(--gold-light); font: 700 clamp(1.7rem, 3.2vw, 2.25rem)/1 Georgia, "Times New Roman", serif; letter-spacing: .01em; }
+    .page-desc { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
+    .date-chip { padding: 9px 12px; color: var(--gold-light); border: 1px solid var(--line); border-radius: 99px; background: rgba(0,0,0,.16); white-space: nowrap; font-size: .76rem; }
+
+    /* Vente */
+    .sale-layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 24px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(135deg, rgba(20,55,35,.88), rgba(5,18,11,.91)); box-shadow: var(--shadow); }
+    .menu-panel { padding: clamp(15px, 2.5vw, 25px); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 15px; border-bottom: 1px solid rgba(214,166,67,.25); }
+    .panel-head h3 { margin: 0; color: var(--gold-light); font: 1.3rem Georgia, serif; }
+    .panel-head span { color: var(--muted); font-size: .75rem; }
+    .product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; padding-top: 18px; }
+    .product-card { min-height: 158px; display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 15px; border: 1px solid rgba(214,166,67,.34); border-radius: 15px; background: linear-gradient(150deg, rgba(2,16,9,.45), rgba(19,64,39,.63)); }
+    .product-card::after { content: "☘"; position: absolute; right: -7px; bottom: -29px; color: rgba(214,166,67,.08); font: 5rem Georgia, serif; }
+    .product-card.inactive, .product-card.out-of-stock { filter: grayscale(.8); opacity: .55; }
+    .product-icon { font-size: 1.65rem; line-height: 1; }
+    .product-name { margin: 10px 0 3px; color: var(--ink); font: 1.1rem Georgia, serif; }
+    .product-price { color: var(--gold-light); font-size: .87rem; font-weight: 750; }
+    .product-stock { margin-top: 4px; color: #9ec888; font-size: .71rem; }
+    .product-stock.low { color: #f2c67a; }
+    .stepper { display: flex; align-items: center; gap: 8px; margin-top: auto; position: relative; z-index: 1; }
+    .stepper button { display: grid; place-items: center; width: 31px; height: 31px; padding: 0; color: var(--gold-light); border: 1px solid rgba(214,166,67,.56); border-radius: 8px; background: rgba(0,0,0,.25); font-size: 1.2rem; line-height: 1; }
+    .stepper button:hover { background: rgba(214,166,67,.18); }
+    .stepper button:disabled { opacity: .3; cursor: default; }
+    .stepper .qty { min-width: 18px; text-align: center; color: #fff4d6; font-size: .92rem; font-weight: 800; }
+    .cart-panel { position: sticky; top: 95px; overflow: hidden; }
+    .cart-head { padding: 20px 20px 14px; border-bottom: 1px solid rgba(214,166,67,.3); }
+    .cart-title { display: flex; align-items: center; justify-content: space-between; }
+    .cart-title h3 { margin: 0; color: var(--gold-light); font: 1.35rem Georgia, serif; }
+    .count-pill { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; color: #1d1505; border-radius: 99px; background: var(--gold); font-size: .73rem; font-weight: 800; }
+    .cart-head small { display: block; color: var(--muted); margin-top: 6px; font-size: .72rem; }
+    .cart-lines { min-height: 164px; max-height: 330px; overflow: auto; padding: 6px 20px; }
+    .empty-cart { display: grid; place-items: center; min-height: 150px; color: #949883; text-align: center; font-size: .82rem; }
+    .cart-line { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 13px 0; border-bottom: 1px dashed rgba(214,166,67,.24); }
+    .cart-line:last-child { border-bottom: 0; }
+    .cart-line strong { font-size: .87rem; }
+    .cart-line small { color: var(--muted); font-size: .72rem; }
+    .cart-line .line-total { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--gold-light); font-size: .86rem; font-weight: 750; }
+    .cart-footer { padding: 15px 20px 20px; border-top: 1px solid rgba(214,166,67,.3); }
+    .total-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+    .total-row span { color: var(--muted); font-size: .84rem; }
+    .total-row strong { color: var(--gold-light); font: 1.78rem Georgia, serif; }
+    .payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 11px; }
+    .pay-option { min-height: 38px; color: var(--muted); border: 1px solid rgba(214,166,67,.32); border-radius: 8px; background: rgba(0,0,0,.12); font-size: .77rem; }
+    .pay-option.active { color: var(--gold-light); border-color: var(--gold); background: rgba(214,166,67,.12); }
+    .confirm-order:disabled { filter: grayscale(1); opacity: .42; cursor: default; }
+
+    /* Dashboard */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .stat-card { min-height: 122px; padding: 17px; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(135deg, rgba(18,54,34,.88), rgba(5,17,10,.9)); }
+    .stat-card::after { content: attr(data-symbol); position: absolute; right: 11px; bottom: -23px; color: rgba(214,166,67,.11); font: 5.7rem Georgia, serif; }
+    .stat-label { color: var(--muted); font-size: .73rem; }
+    .stat-value { position: relative; z-index: 1; margin-top: 11px; color: var(--gold-light); font: 1.72rem Georgia, serif; }
+    .stat-help { color: #8cab7b; font-size: .7rem; margin-top: 4px; }
+    .dash-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; margin-top: 18px; }
+    .dashboard-panel { padding: 19px; }
+    .dashboard-panel h3 { margin: 0; color: var(--gold-light); font: 1.25rem Georgia, serif; }
+    .dashboard-panel p.help { color: var(--muted); margin: 4px 0 16px; font-size: .77rem; }
+    .bar-row { display: grid; grid-template-columns: minmax(72px, .7fr) minmax(90px, 2fr) auto; align-items: center; gap: 10px; margin: 13px 0; }
+    .bar-label { color: var(--ink); font-size: .79rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { height: 9px; overflow: hidden; border-radius: 99px; background: rgba(0,0,0,.38); }
+    .bar-fill { height: 100%; min-width: 5px; border-radius: inherit; background: linear-gradient(90deg, #916a24, #f0c766); box-shadow: 0 0 10px rgba(238,196,95,.35); }
+    .bar-value { color: var(--gold-light); font-size: .74rem; font-weight: 700; }
+    .top-sales { padding: 0; list-style: none; margin: 4px 0 0; }
+    .top-sales li { display: grid; grid-template-columns: 25px 1fr auto; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 1px solid rgba(214,166,67,.2); }
+    .top-sales li:last-child { border-bottom: 0; }
+    .rank { display: grid; place-items: center; width: 23px; height: 23px; color: #251806; border-radius: 50%; background: var(--gold); font: bold .75rem Georgia, serif; }
+    .top-sales b { font: .85rem Georgia, serif; }
+    .top-sales small { color: var(--muted); font-size: .71rem; }
+    .top-sales .sold { color: var(--gold-light); font-size: .76rem; font-weight: 750; }
+    .recent-orders { margin-top: 4px; }
+    .recent-order { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 13px 0; border-bottom: 1px solid rgba(214,166,67,.2); }
+    .recent-order:last-child { border-bottom: 0; }
+    .recent-order b { color: var(--gold-light); font: 1rem Georgia, serif; }
+    .recent-order small { color: var(--muted); font-size: .71rem; }
+    .recent-order .seller { color: #a5ce8b; }
+    .recent-order .order-total { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+
+    /* Tables, journées, administration */
+    .table-panel { overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th { padding: 14px 18px; color: #a9a48b; border-bottom: 1px solid var(--line); background: rgba(0,0,0,.18); text-align: left; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; }
+    td { padding: 14px 18px; border-bottom: 1px solid rgba(214,166,67,.17); color: var(--ink); font-size: .83rem; }
+    tr:last-child td { border-bottom: 0; }
+    td small { display: block; color: var(--muted); margin-top: 3px; font-size: .71rem; }
+    .order-no { color: var(--gold-light); font: .96rem Georgia, serif; }
+    .order-total { color: var(--gold-light); font-weight: 750; }
+    .tag { display: inline-block; padding: 4px 8px; border-radius: 99px; font-size: .68rem; font-weight: 750; }
+    .tag.done { color: #c5edbd; background: rgba(92,162,89,.16); border: 1px solid rgba(111,190,105,.35); }
+    .tag.cancel { color: #f3b3a8; background: rgba(198,77,66,.14); border: 1px solid rgba(218,111,100,.3); }
+    .icon-btn { display: inline-grid; place-items: center; min-width: 30px; height: 30px; color: var(--gold-light); border: 1px solid rgba(214,166,67,.35); border-radius: 7px; background: transparent; }
+    .icon-btn:hover { background: rgba(214,166,67,.13); }
+    .icon-btn.delete { color: #f3aaa0; border-color: rgba(221,110,99,.45); }
+    .filter-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .filter-row input, .filter-row select { min-height: 38px; padding: 0 10px; color: var(--ink); border: 1px solid rgba(214,166,67,.35); border-radius: 8px; background: rgba(0,0,0,.18); font-size: .77rem; outline: none; }
+    .day-overview { display: grid; grid-template-columns: 1.3fr repeat(3, .7fr); margin-bottom: 18px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: linear-gradient(135deg, rgba(19,59,38,.9), rgba(4,17,10,.9)); }
+    .day-overview > div { padding: 21px; border-right: 1px solid rgba(214,166,67,.26); }
+    .day-overview > div:last-child { border: 0; }
+    .day-overview span { display: block; color: var(--muted); font-size: .72rem; }
+    .day-overview strong { display: block; margin-top: 6px; color: var(--gold-light); font: 1.35rem Georgia, serif; }
+    .day-overview .open strong { color: #bfe6a6; }
+    .admin-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; }
+    .admin-section { padding: 20px; }
+    .admin-section h3 { margin: 0; color: var(--gold-light); font: 1.3rem Georgia, serif; }
+    .admin-section > p { color: var(--muted); margin: 6px 0 17px; font-size: .78rem; }
+    .admin-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; padding: 13px; margin-bottom: 12px; border: 1px solid rgba(214,166,67,.22); border-radius: 13px; background: rgba(0,0,0,.14); }
+    .admin-form.drinks { grid-template-columns: 1.2fr .8fr .8fr auto; }
+    .admin-form.users { grid-template-columns: 1fr 1fr 1fr auto; }
+    .admin-form input, .admin-form select { min-width: 0; min-height: 40px; padding: 0 10px; color: var(--ink); border: 1px solid rgba(214,166,67,.33); border-radius: 8px; background: rgba(0,0,0,.22); outline: none; font-size: .79rem; }
+    .simple-list { padding: 0; margin: 0; list-style: none; }
+    .simple-list li { display: grid; grid-template-columns: 35px 1fr auto auto; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid rgba(214,166,67,.17); }
+    .simple-list li:last-child { border: 0; }
+    .simple-list .list-icon { font-size: 1.25rem; }
+    .simple-list b { display: block; font: 1rem Georgia, serif; }
+    .simple-list small { color: var(--muted); font-size: .71rem; }
+    .switch { width: 38px; height: 22px; position: relative; padding: 0; border: 1px solid rgba(214,166,67,.42); border-radius: 99px; background: rgba(0,0,0,.25); }
+    .switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #777b6b; transition: .15s ease; }
+    .switch.on { background: rgba(91,155,72,.25); border-color: #8db86d; }
+    .switch.on::before { left: 18px; background: #a6d686; }
+    .users-list li { grid-template-columns: 36px 1fr auto auto; }
+    .role { color: #96c77b; font-size: .71rem; }
+    .stock-list li { grid-template-columns: 35px 1fr auto auto; }
+    .stock-qty { min-width: 36px; color: var(--gold-light); font: 1.3rem Georgia, serif; text-align: center; }
+    .stock-actions { display: flex; gap: 6px; align-items: center; }
+    .stock-input { width: 58px; min-height: 34px; padding: 0 6px; color: var(--ink); border: 1px solid rgba(214,166,67,.33); border-radius: 7px; background: rgba(0,0,0,.22); outline: none; font-size: .76rem; }
+
+    /* Modal / toast */
+    .modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 19px; background: rgba(0,0,0,.73); backdrop-filter: blur(4px); }
+    .modal { width: min(100%, 430px); padding: 27px; border: 1px solid var(--gold); border-radius: 20px; background: linear-gradient(140deg, #163c27, #07140d); box-shadow: inset 0 0 0 3px rgba(214,166,67,.15), var(--shadow); }
+    .modal .modal-symbol { color: #75a653; text-align: center; font: 2.7rem Georgia, serif; }
+    .modal h3 { margin: 8px 0 7px; color: var(--gold-light); text-align: center; font: 1.7rem Georgia, serif; }
+    .modal p { color: var(--muted); text-align: center; font-size: .86rem; line-height: 1.45; }
+    .modal-summary { padding: 12px 0; margin: 16px 0; border-top: 1px dashed rgba(214,166,67,.38); border-bottom: 1px dashed rgba(214,166,67,.38); }
+    .modal-summary div { display: flex; justify-content: space-between; gap: 10px; margin: 7px 0; color: #e8dabe; font-size: .82rem; }
+    .modal-summary div:last-child { padding-top: 10px; margin-top: 10px; border-top: 1px solid rgba(214,166,67,.24); color: var(--gold-light); font: 1.28rem Georgia, serif; }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1.25fr; gap: 10px; }
+    #toast { position: fixed; z-index: 80; right: 18px; bottom: 18px; max-width: calc(100vw - 36px); display: flex; align-items: center; gap: 10px; padding: 13px 16px; color: #e9f2e2; border: 1px solid rgba(129,193,129,.65); border-radius: 12px; background: #183d26; box-shadow: var(--shadow); font-size: .84rem; transform: translateY(100px); opacity: 0; transition: .25s ease; }
+    #toast.show { transform: none; opacity: 1; }
+    #toast.error { color: #ffe2dd; border-color: rgba(229,110,98,.7); background: #51241f; }
+    .mobile-cart-bar { display: none; }
+
+    @media (max-width: 1080px) {
+      .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sale-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .admin-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 780px) {
+      .topbar { min-height: 62px; }
+      .top-brand .sub, .user-label, .status span { display: none; }
+      .top-brand .brand-name { font-size: 1.45rem; }
+      .app-layout { display: block; }
+      .side-nav { position: sticky; top: 62px; z-index: 18; display: flex; gap: 2px; overflow-x: auto; padding: 7px 12px; border-right: 0; border-bottom: 1px solid rgba(214,166,67,.24); background: rgba(5,15,10,.94); backdrop-filter: blur(14px); }
+      .nav-label, .nav-divider, .nav-day { display: none; }
+      .nav-item { flex: 0 0 auto; width: auto; min-height: 42px; margin: 0; padding: 0 11px; font-size: .75rem; }
+      .nav-item span { width: auto; font-size: .98rem; }
+      .content { padding: 20px 14px calc(104px + env(safe-area-inset-bottom)); }
+      .sale-layout { grid-template-columns: 1fr; }
+      .cart-panel { position: static; scroll-margin-top: 118px; }
+      .cart-lines { min-height: 118px; max-height: 218px; }
+      .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .product-card { min-height: 148px; padding: 12px; }
+      .stepper { gap: 9px; }
+      .stepper button { width: 38px; height: 38px; border-radius: 10px; }
+      .confirm-order { min-height: 52px; }
+      .mobile-cart-bar { position: fixed; z-index: 25; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); left: 12px; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 58px; padding: 8px 13px 8px 16px; color: #211604; border: 1px solid #f5d36d; border-radius: 15px; background: linear-gradient(180deg, #f5d678, #c28a2d); box-shadow: 0 10px 26px rgba(0,0,0,.52), inset 0 1px rgba(255,255,255,.52); text-align: left; }
+      .mobile-cart-bar small { display: block; color: #61471b; font-size: .67rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+      .mobile-cart-bar b { display: block; color: #201506; margin-top: 2px; font-size: .95rem; }
+      .mobile-cart-bar .mobile-total { font: 1.22rem Georgia, serif; white-space: nowrap; }
+      .mobile-cart-bar .mobile-arrow { display: grid; place-items: center; width: 33px; height: 33px; color: #fff1c4; border-radius: 50%; background: #3b2a0d; font-size: 1.2rem; }
+      .dash-grid { grid-template-columns: 1fr; }
+      .day-overview { grid-template-columns: 1fr 1fr; }
+      .day-overview > div:nth-child(2) { border-right: 0; }
+      .day-overview > div:nth-child(-n+2) { border-bottom: 1px solid rgba(214,166,67,.26); }
+      .modal-backdrop { align-items: end; padding: 0; }
+      .modal { width: 100%; max-width: none; padding: 25px 20px calc(22px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
+    }
+    @media (max-width: 480px) {
+      .page-head { display: block; }
+      .date-chip { display: inline-block; margin-top: 13px; }
+      .stats-grid { gap: 9px; }
+      .stat-card { min-height: 111px; padding: 13px; }
+      .stat-value { font-size: 1.45rem; }
+      .product-name { font-size: 1rem; }
+      .product-price { font-size: .79rem; }
+      .product-stock { font-size: .67rem; }
+      .menu-panel { padding: 13px; }
+      .panel-head { padding-bottom: 12px; }
+      .day-overview strong { font-size: 1.14rem; }
+      .admin-form, .admin-form.users, .admin-form.drinks { grid-template-columns: 1fr; }
+      .admin-form .btn { width: 100%; }
+      .stock-list li { grid-template-columns: 30px 1fr auto; }
+      .stock-list .stock-actions { grid-column: 2 / -1; }
+      .modal { padding: 22px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginScreen">
+    <form class="login-card" id="loginForm">
+      <div class="brand-mark">
+        <span class="clover">☘</span>
+        <h1>STEINWAY</h1>
+        <p>Beer garden · gestion de bar</p>
+      </div>
+      <div class="ornament">Bienvenue</div>
+      <h2>Ouvrir votre session</h2>
+      <p class="intro">Identifiez-vous pour démarrer votre journée.</p>
+      <div class="field">
+        <label for="loginUser">Utilisateur</label>
+        <select id="loginUser"></select>
+      </div>
+      <div class="field">
+        <label for="loginPin">Code PIN</label>
+        <input class="pin" id="loginPin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" aria-label="Code PIN">
+      </div>
+      <button class="btn full" type="submit">Se connecter</button>
+      <p class="login-note">Démo : admin <b>1234</b> · Manon <b>2468</b> · Harry <b>8642</b> · Raven <b>8642</b></p>
+    </form>
+  </section>
+
+  <main id="appScreen" class="hidden">
+    <header class="topbar">
+      <div class="top-brand">
+        <span class="mini-clover">☘</span>
+        <div>
+          <div class="brand-name">STEINWAY</div>
+          <div class="sub">Beer garden · caisse & commandes</div>
+        </div>
+      </div>
+      <div class="status-row">
+        <div class="status"><i></i><span>Journée ouverte</span></div>
+        <div class="user-menu">
+          <div class="avatar" id="avatar">A</div>
+          <div class="user-label"><strong id="currentUser">Administrateur</strong><span id="currentRole">Administrateur</span></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <nav class="side-nav" aria-label="Navigation principale">
+        <p class="nav-label">Navigation</p>
+        <button class="nav-item active" data-view="sale"><span>✚</span>Nouvelle commande</button>
+        <button class="nav-item" data-view="dashboard"><span>◔</span>Tableau de bord</button>
+        <button class="nav-item" data-view="orders"><span>▤</span>Commandes</button>
+        <button class="nav-item" data-view="days"><span>◫</span>Journées</button>
+        <div class="nav-divider admin-only" id="settingsDivider"></div>
+        <p class="nav-label admin-only" id="settingsLabel">Réglages</p>
+        <button class="nav-item admin-only" id="remunNav" data-view="remuneration"><span>💰</span>Rémunération</button>
+        <button class="nav-item admin-only" id="adminNav" data-view="admin"><span>⚙</span>Administration</button>
+        <div class="nav-day">
+          <small>Journée en cours</small>
+          <strong id="sideDayAmount">$0.00</strong>
+          <button id="openCloseDay">Clôturer la journée</button>
+        </div>
+      </nav>
+
+      <div class="content">
+        <section class="view active" id="saleView">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Point de vente</p>
+              <h2>Nouvelle commande</h2>
+              <p class="page-desc">Ajoutez les boissons, vérifiez le total et confirmez en un geste.</p>
+            </div>
+            <div class="date-chip" id="todayLabel"></div>
+          </div>
+          <button class="mobile-cart-bar" id="mobileCartBar" type="button" aria-label="Voir la commande en cours">
+            <span><small>Commande en cours</small><b><span id="mobileCartCount">0</span> article<span id="mobileCartPlural">s</span></b></span>
+            <span class="mobile-total" id="mobileCartTotal">$0.00</span>
+            <span class="mobile-arrow">›</span>
+          </button>
+          <div class="sale-layout">
+            <section class="panel menu-panel">
+              <div class="panel-head"><h3>Carte des boissons</h3><span id="activeProductsCount"></span></div>
+              <div class="product-grid" id="productGrid"></div>
+            </section>
+            <aside class="panel cart-panel" id="cartPanel">
+              <div class="cart-head"><div class="cart-title"><h3>Votre commande</h3><span class="count-pill" id="cartCount">0</span></div><small>Commande en préparation</small></div>
+              <div class="cart-lines" id="cartLines"></div>
+              <div class="cart-footer">
+                <div class="total-row"><span>Total à encaisser</span><strong id="cartTotal">$0.00</strong></div>
+                <div class="payment-options"><button class="pay-option active" data-payment="Espèces">Espèces</button><button class="pay-option" data-payment="Carte">Carte</button></div>
+                <button class="btn full confirm-order" id="confirmOrder" disabled>Confirmer la commande</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="dashboardView">
+          <div class="page-head"><div><p class="eyebrow">Vue d'ensemble</p><h2>Tableau de bord</h2><p class="page-desc">Les chiffres se mettent à jour à chaque commande ou annulation.</p></div><div class="date-chip">Aujourd’hui</div></div>
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="dash-grid">
+            <section class="panel dashboard-panel"><h3>Chiffre d’affaires par boisson</h3><p class="help">Commandes validées de la journée.</p><div id="revenueBars"></div></section>
+            <section class="panel dashboard-panel"><h3>Meilleures ventes</h3><p class="help">Classement par quantités vendues.</p><ol class="top-sales" id="topSales"></ol></section>
+          </div>
+          <section class="panel dashboard-panel" style="margin-top:18px"><h3>Dernières commandes</h3><p class="help">Le vendeur est indiqué en face de chaque commande.</p><div class="recent-orders" id="recentOrders"></div></section>
+        </section>
+
+        <section class="view" id="ordersView">
+          <div class="page-head"><div><p class="eyebrow">Registre de caisse</p><h2>Historique des commandes</h2><p class="page-desc">Retrouvez le détail, l’heure et le moyen de paiement de chaque vente.</p></div><div class="filter-row"><select id="orderFilter"><option value="all">Toutes les commandes</option><option value="valid">Validées</option><option value="cancelled">Annulées</option></select></div></div>
+          <section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Commande</th><th>Heure</th><th>Vendeur</th><th>Détail</th><th>Paiement</th><th>Total</th><th>État</th><th>Action</th></tr></thead><tbody id="ordersTable"></tbody></table></div></section>
+        </section>
+
+        <section class="view" id="daysView">
+          <div class="page-head"><div><p class="eyebrow">Suivi de caisse</p><h2>Gestion des journées</h2><p class="page-desc">Ouvrez, clôturez et consultez votre historique quotidien.</p></div><button class="btn small" id="dayAction">Clôturer la journée</button></div>
+          <section class="day-overview" id="dayOverview"></section>
+          <section class="panel table-panel"><div class="panel-head" style="padding:18px 20px"><h3>Historique des journées</h3><span>CA & commandes</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Ouverture</th><th>Clôture</th><th>CA réalisé</th><th>Commandes</th><th>État</th></tr></thead><tbody id="daysTable"></tbody></table></div></section>
+        </section>
+
+        <section class="view" id="adminView">
+          <div class="page-head"><div><p class="eyebrow">Espace administrateur</p><h2>Administration</h2><p class="page-desc">Gérez votre carte, vos tarifs, vos stocks et les accès de l’équipe.</p></div></div>
+          <div class="admin-grid">
+            <section class="panel admin-section"><h3>Boissons</h3><p>Ajoutez une boisson, modifiez son tarif ou désactivez-la temporairement.</p>
+              <form class="admin-form drinks" id="drinkForm"><input id="drinkName" required placeholder="Nom de la boisson"><input id="drinkPrice" required type="number" min="1" step="0.5" placeholder="Prix en $"><input id="drinkStock" required type="number" min="0" step="1" placeholder="Stock initial"><button class="btn small" type="submit">Ajouter</button></form>
+              <ul class="simple-list" id="drinksList"></ul>
+            </section>
+            <section class="panel admin-section"><h3>Utilisateurs</h3><p>Ajoutez des comptes avec un rôle et un code PIN individuels.</p>
+              <form class="admin-form users" id="userForm"><input id="newUserName" required placeholder="Nom complet"><select id="newUserRole"></select><input id="newUserPin" required inputmode="numeric" maxlength="4" placeholder="PIN à 4 chiffres"><button class="btn small" type="submit">Ajouter</button></form>
+              <form class="admin-form roles" id="roleForm"><input id="newRoleName" required placeholder="Nom du rôle"><button class="btn small" type="submit">Ajouter rôle</button></form>
+              <ul class="simple-list roles-list" id="rolesList"></ul>
+              <ul class="simple-list users-list" id="usersList"></ul>
+              <button class="btn ghost small" id="passwordHint" style="margin-top:15px">Modifier mon code PIN</button>
+            </section>
+            <section class="panel admin-section"><h3>Gestion des stocks</h3><p>Réapprovisionnez les boissons. Le stock diminue automatiquement dès qu’une vente est validée.</p>
+              <ul class="simple-list stock-list" id="stockList"></ul>
+            </section>
+          </div>
+        </section>
+        <section class="view" id="remunerationView">
+          <div class="page-head"><div><p class="eyebrow">Gestion des rémunérations</p><h2>Rémunération de l'équipe</h2><p class="page-desc">Définissez un pourcentage de CA pour chaque utilisateur et gérez les primes.</p></div></div>
+          <section class="panel admin-section" style="max-width:none"><h3>Configuration des rémunérations</h3><p>Saisissez le pourcentage du chiffre d'affaires à verser à chaque membre de l'équipe.</p>
+            <div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>% du CA</th><th>Prime fixe ($)</th><th>CA généré</th><th>Rémunération estimée</th><th>Action</th></tr></thead><tbody id="remunerationTable"></tbody></table></div>
+          </section>
+        </section>      </div>
+    </div>
+  </main>
+
+  <div class="modal-backdrop hidden" id="modalBackdrop" aria-modal="true" role="dialog">
+    <div class="modal" id="modalContent"></div>
+  </div>
+  <div id="toast" role="status"></div>
+
+  <script>
+    const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value);
+    const frenchDate = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const today = new Date();
+    const isoToday = today.toISOString().slice(0, 10);
+    const STORAGE_KEY = 'steinway-state-v1';
+    const SHARED_API = '/.netlify/functions/data';
+
+    const defaultState = {
+      user: { name: 'Administrateur', role: 'Administrateur', initial: 'A' },
+      roles: ['Administrateur', 'Caissier', 'Barman', 'Barmaid'],
+      activeView: 'sale', payment: 'Espèces', cart: {}, dayOpen: true,
+      remuneration: {
+        1: { percentage: 0, bonus: 0 },
+        2: { percentage: 5, bonus: 0 },
+        3: { percentage: 5, bonus: 0 },
+        4: { percentage: 5, bonus: 0 },
+      },
+      products: [
+        { id: 1, name: 'Bière pression', price: 500, icon: '🍺', stock: 1, active: true },
+        { id: 2, name: 'Cidre', price: 600, icon: '🍏', stock: 1, active: true },
+        { id: 3, name: 'Jus de raisin', price: 200, icon: '🍇', stock: 1, active: true },
+        { id: 4, name: 'Piña Colada', price: 600, icon: '🍹', stock: 1, active: true },
+        { id: 5, name: 'Old Fashioned', price: 600, icon: '🥃', stock: 1, active: true },
+        { id: 6, name: 'Bourbon', price: 800, icon: '🥃', stock: 1, active: true },
+        { id: 7, name: 'Whisky', price: 800, icon: '🥃', stock: 1, active: true },
+        { id: 8, name: 'Champagne', price: 2000, icon: '🍾', stock: 1, active: true },
+      ],
+      users: [
+        { id: 1, name: 'Administrateur', role: 'Administrateur', pin: '1234', initial: 'A' },
+        { id: 2, name: 'Manon Lefèvre', role: 'Barmaid', pin: '2468', initial: 'M' },
+        { id: 3, name: 'Harry Snake', role: 'Barman', pin: '8642', initial: 'H' },
+	{ id: 4, name: 'Raven', role: 'Barman', pin: '8642', initial: 'R' },
+      ],
+      orders: [
+        { id: 'C-1047', day: isoToday, time: '11:48', seller: 'Manon Lefèvre', items: [{productId: 0, qty: 0, unitPrice: 0}, {productId: 0, qty: 0, unitPrice: 0}], payment: 'Espèces', status: 'valid' },
+        { id: 'C-1038', day: '2026-08-29', time: '19:02', seller: 'Administrateur', items: [{productId: 1, qty: 3, unitPrice: 5}, {productId: 7, qty: 2, unitPrice: 8}], payment: 'Espèces', status: 'valid' },
+      ],
+      days: [        
+	{ date: isoToday, opened: '09:30', closed: null },
+              ]
+    };
+
+    const loadState = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return structuredClone(defaultState);
+        const parsed = JSON.parse(saved);
+        return {
+          ...structuredClone(defaultState),
+          ...parsed,
+          user: { ...structuredClone(defaultState.user), ...(parsed.user || {}) },
+          cart: parsed.cart || {},
+          roles: Array.isArray(parsed.roles) && parsed.roles.length ? parsed.roles : structuredClone(defaultState.roles),
+          products: Array.isArray(parsed.products) ? parsed.products : structuredClone(defaultState.products),
+          users: Array.isArray(parsed.users) ? parsed.users : structuredClone(defaultState.users),
+          orders: Array.isArray(parsed.orders) ? parsed.orders : structuredClone(defaultState.orders),
+          days: Array.isArray(parsed.days) ? parsed.days : structuredClone(defaultState.days),
+          remuneration: parsed.remuneration ? { ...structuredClone(defaultState.remuneration), ...parsed.remuneration } : structuredClone(defaultState.remuneration),
+        };
+      } catch (error) {
+        console.warn('Impossible de charger la sauvegarde locale:', error);
+        return structuredClone(defaultState);
+      }
+    };
+
+    const fetchSharedState = async () => {
+      try {
+        const response = await fetch(SHARED_API, { headers: { Accept: 'application/json' } });
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (data && Array.isArray(data.products)) return data;
+      } catch (error) {
+        console.warn('Aucune donnée distante disponible, utilisation du stockage local.', error);
+      }
+      return null;
+    };
+
+    const saveSharedState = async () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        await fetch(SHARED_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state)
+        });
+      } catch (error) {
+        console.warn('Impossible de sauvegarder dans le stockage partagé:', error);
+      }
+    };
+
+    let state = loadState();
+
+    const hydrateState = async () => {
+      const shared = await fetchSharedState();
+      if (shared) {
+        state = {
+          ...structuredClone(defaultState),
+          ...shared,
+          user: { ...structuredClone(defaultState.user), ...(shared.user || {}) },
+          cart: shared.cart || {},
+          roles: Array.isArray(shared.roles) && shared.roles.length ? shared.roles : structuredClone(defaultState.roles),
+          products: Array.isArray(shared.products) ? shared.products : structuredClone(defaultState.products),
+          users: Array.isArray(shared.users) ? shared.users : structuredClone(defaultState.users),
+          orders: Array.isArray(shared.orders) ? shared.orders : structuredClone(defaultState.orders),
+          days: Array.isArray(shared.days) ? shared.days : structuredClone(defaultState.days),
+          remuneration: shared.remuneration ? { ...structuredClone(defaultState.remuneration), ...shared.remuneration } : structuredClone(defaultState.remuneration),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+      renderAll();
+    };
+
+    const saveState = () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (error) {
+        console.warn('Impossible de sauvegarder dans le navigateur:', error);
+      }
+      void saveSharedState();
+    };
+
+    const el = id => document.getElementById(id);
+    const getProduct = id => state.products.find(product => product.id === Number(id));
+    const validOrders = (date = isoToday) => state.orders.filter(order => order.day === date && order.status === 'valid');
+    const orderTotal = order => order.items.reduce((sum, line) => sum + (line.unitPrice ?? getProduct(line.productId)?.price ?? 0) * line.qty, 0);
+    const orderQty = order => order.items.reduce((sum, line) => sum + line.qty, 0);
+    const cartEntries = () => Object.entries(state.cart).filter(([, qty]) => qty > 0).map(([id, qty]) => ({ product: getProduct(id), qty }));
+    const cartTotal = () => cartEntries().reduce((sum, line) => sum + line.product.price * line.qty, 0);
+    const cartQty = () => cartEntries().reduce((sum, line) => sum + line.qty, 0);
+    const timeNow = () => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date());
+
+    function renderSale() {
+      const activeProducts = state.products.filter(product => product.active && product.stock > 0);
+      el('activeProductsCount').textContent = activeProducts.length + ' boissons disponibles';
+      el('productGrid').innerHTML = state.products.map(product => {
+        const qty = state.cart[product.id] || 0;
+        const unavailable = !product.active || product.stock === 0;
+        return `<article class="product-card ${!product.active ? 'inactive' : ''} ${product.stock === 0 ? 'out-of-stock' : ''}">
+          <div class="product-icon">${product.icon}</div><div class="product-name">${product.name}</div><div class="product-price">${money(product.price)}</div><div class="product-stock ${product.stock <= 5 ? 'low' : ''}">${product.stock > 0 ? `Stock restant : ${Math.max(0, product.stock - qty)}` : 'Rupture de stock'}</div>
+          <div class="stepper"><button data-step="minus" data-product="${product.id}" ${qty === 0 || unavailable ? 'disabled' : ''} aria-label="Retirer ${product.name}">−</button><span class="qty">${qty}</span><button data-step="plus" data-product="${product.id}" ${unavailable || qty >= product.stock ? 'disabled' : ''} aria-label="Ajouter ${product.name}">+</button></div>
+        </article>`;
+      }).join('');
+      const entries = cartEntries();
+      el('cartCount').textContent = cartQty();
+      el('cartTotal').textContent = money(cartTotal());
+      el('mobileCartCount').textContent = cartQty();
+      el('mobileCartPlural').textContent = cartQty() > 1 ? 's' : '';
+      el('mobileCartTotal').textContent = money(cartTotal());
+      el('cartLines').innerHTML = entries.length ? entries.map(({product, qty}) => `<div class="cart-line"><div><strong>${qty} × ${product.name}</strong><small>${money(product.price)} l’unité</small></div><span class="line-total">${money(product.price * qty)}</span></div>`).join('') : '<div class="empty-cart">☘<br>Ajoutez des boissons<br>pour commencer une commande.</div>';
+      el('confirmOrder').disabled = !entries.length || !state.dayOpen;
+    }
+
+    function dailyStats(date = isoToday) {
+      const orders = validOrders(date);
+      const total = orders.reduce((sum, order) => sum + orderTotal(order), 0);
+      const quantities = orders.reduce((sum, order) => sum + orderQty(order), 0);
+      const byProduct = {};
+      orders.forEach(order => order.items.forEach(line => {
+        const product = getProduct(line.productId); if (!product) return;
+        byProduct[product.id] ||= { product, qty: 0, total: 0 };
+        const unitPrice = line.unitPrice ?? product.price;
+        byProduct[product.id].qty += line.qty; byProduct[product.id].total += unitPrice * line.qty;
+      }));
+      return { orders, total, quantities, byProduct: Object.values(byProduct).sort((a,b) => b.total - a.total) };
+    }
+
+    function renderDashboard() {
+      const stats = dailyStats();
+      const average = stats.orders.length ? Math.round(stats.total / stats.orders.length) : 0;
+      const statData = [
+        ['CA du jour', money(stats.total), 'Journée en cours', '✦'],
+        ['Commandes', stats.orders.length, 'Ventes validées', '▤'],
+        ['Quantités vendues', stats.quantities, 'Toutes boissons', '◉'],
+        ['Panier moyen', money(average), 'Par commande', '◈'],
+      ];
+      if (state.user.role !== 'Administrateur') {
+        const userRemu = state.remuneration[state.user.id] || { percentage: 0, bonus: 0 };
+        const userRevenue = validOrders().filter(order => order.seller === state.user.name).reduce((sum, order) => sum + orderTotal(order), 0);
+        const userPay = Math.round(userRevenue * userRemu.percentage / 100 + userRemu.bonus * 100) / 100;
+        statData.push(['Votre rémunération', money(userPay), 'Salaire prévu', '💰']);
+      }
+      el('statsGrid').innerHTML = statData.map(([label, value, help, symbol]) => `<article class="stat-card" data-symbol="${symbol}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-help">${help}</div></article>`).join('');
+      const bars = stats.byProduct.slice(0, 5); const max = bars[0]?.total || 1;
+      el('revenueBars').innerHTML = bars.length ? bars.map(({product, total}) => `<div class="bar-row"><span class="bar-label">${product.name}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(8, Math.round(total/max*100))}%"></div></div><span class="bar-value">${money(total)}</span></div>`).join('') : '<p class="help">Aucune vente enregistrée aujourd’hui.</p>';
+      const best = Object.values(stats.byProduct).sort((a,b) => b.qty - a.qty).slice(0, 4);
+      el('topSales').innerHTML = best.length ? best.map(({product, qty}, index) => `<li><span class="rank">${index+1}</span><div><b>${product.name}</b><small>${money(product.price)} l’unité</small></div><span class="sold">${qty} vendu${qty > 1 ? 's' : ''}</span></li>`).join('') : '<li><div>Aucune vente aujourd’hui.</div></li>';
+      const recent = [...stats.orders].sort((a, b) => b.time.localeCompare(a.time)).slice(0, 4);
+      el('recentOrders').innerHTML = recent.length ? recent.map(order => `<div class="recent-order"><div><b>${order.id}</b><small>${order.time} · <span class="seller">Vendeur : ${order.seller}</span></small></div><span class="order-total">${money(orderTotal(order))}</span></div>`).join('') : '<p class="help">Aucune commande validée aujourd’hui.</p>';
+      el('sideDayAmount').textContent = money(stats.total);
+    }
+
+    function detailText(order) { return order.items.map(line => { const product = getProduct(line.productId); return product ? `${line.qty} × ${product.name}` : ''; }).filter(Boolean).join(', '); }
+    function renderOrders() {
+      const filter = el('orderFilter').value;
+      const orders = [...state.orders].filter(order => filter === 'all' || order.status === filter).sort((a,b) => (b.day + b.time).localeCompare(a.day + a.time));
+      el('ordersTable').innerHTML = orders.map(order => `<tr><td><span class="order-no">${order.id}</span><small>${frenchDate.format(new Date(order.day + 'T12:00:00'))}</small></td><td>${order.time}</td><td><span class="seller">${order.seller}</span></td><td>${detailText(order)}</td><td>${order.payment}</td><td class="order-total">${money(orderTotal(order))}</td><td><span class="tag ${order.status === 'valid' ? 'done' : 'cancel'}">${order.status === 'valid' ? 'Validée' : 'Annulée'}</span></td><td>${order.status === 'valid' && order.day === isoToday ? `<button class="icon-btn delete" data-cancel="${order.id}" title="Annuler la commande" aria-label="Annuler ${order.id}">×</button>` : '—'}</td></tr>`).join('') || '<tr><td colspan="8">Aucune commande pour ce filtre.</td></tr>';
+    }
+
+    function renderDays() {
+      const current = state.days.find(day => day.date === isoToday);
+      const stats = dailyStats();
+      el('dayOverview').innerHTML = `<div class="open"><span>État de la journée</span><strong>${state.dayOpen ? '● Ouverte depuis ' + current.opened : '● Clôturée à ' + current.closed}</strong></div><div><span>CA du jour</span><strong>${money(stats.total)}</strong></div><div><span>Commandes</span><strong>${stats.orders.length}</strong></div><div><span>Boissons vendues</span><strong>${stats.quantities}</strong></div>`;
+      el('dayAction').textContent = state.dayOpen ? 'Clôturer la journée' : 'Réouvrir la journée';
+      el('openCloseDay').textContent = state.dayOpen ? 'Clôturer la journée' : 'Réouvrir la journée';
+      el('daysTable').innerHTML = state.days.map(day => { const stat = dailyStats(day.date); return `<tr><td>${frenchDate.format(new Date(day.date + 'T12:00:00'))}</td><td>${day.opened}</td><td>${day.closed || '—'}</td><td class="order-total">${money(stat.total)}</td><td>${stat.orders.length}</td><td><span class="tag ${day.closed ? 'done' : 'cancel'}">${day.closed ? 'Clôturée' : 'En cours'}</span></td></tr>`; }).join('');
+    }
+
+    function renderRoles() {
+      const list = el('rolesList');
+      if (!list) return;
+      list.innerHTML = state.roles.map(role => `<li><span class="role-label">${role}</span><button class="icon-btn delete" data-delete-role="${role}" title="Supprimer le rôle">×</button></li>`).join('');
+      const selector = el('newUserRole');
+      if (!selector) return;
+      const current = selector.value || state.roles[0] || '';
+      selector.innerHTML = state.roles.map(role => `<option value="${role}">${role}</option>`).join('');
+      selector.value = state.roles.includes(current) ? current : state.roles[0] || '';
+    }
+
+    function renderAdmin() {
+      el('drinksList').innerHTML = state.products.map(product => `<li><span class="list-icon">${product.icon}</span><div><b>${product.name}</b><small>${money(product.price)} · ${product.stock} en stock · ${product.active ? 'Disponible à la vente' : 'Indisponible'}</small></div><button class="switch ${product.active ? 'on' : ''}" data-toggle-drink="${product.id}" aria-label="${product.active ? 'Désactiver' : 'Activer'} ${product.name}"></button><button class="icon-btn" data-edit-drink="${product.id}" title="Modifier le prix">✎</button></li>`).join('');
+      el('usersList').innerHTML = state.users.map(user => `<li><span class="avatar">${user.initial}</span><div><b>${user.name}</b><small class="role">${user.role}</small></div><small>PIN ${user.pin}</small><div class="row-actions"><button class="icon-btn" data-edit-user="${user.id}" title="Modifier cet utilisateur">✎</button><button class="icon-btn delete" data-delete-user="${user.id}" title="Supprimer cet utilisateur">×</button></div></li>`).join('');
+      el('stockList').innerHTML = state.products.map(product => `<li><span class="list-icon">${product.icon}</span><div><b>${product.name}</b><small>${product.stock === 0 ? 'Rupture de stock' : product.stock <= 5 ? 'Stock bas — à réapprovisionner' : 'Stock disponible'}</small></div><strong class="stock-qty">${product.stock}</strong><div class="stock-actions"><input class="stock-input" data-stock-input="${product.id}" type="number" min="1" value="1" aria-label="Quantité à ajouter pour ${product.name}"><button class="btn small" data-restock="${product.id}">+ Stock</button></div></li>`).join('');
+      renderRoles();
+    }
+
+    function renderLoginUsers() {
+      const select = el('loginUser');
+      if (!select) return;
+      select.innerHTML = state.users.map(user => `<option value="${user.id}">${user.name}</option>`).join('');
+      if (state.users.length) {
+        select.value = String(state.users[0].id);
+      }
+    }
+
+    function userRevenue(userId, date = isoToday) {
+      return validOrders(date).filter(order => order.seller === state.users.find(u => u.id === Number(userId))?.name).reduce((sum, order) => sum + orderTotal(order), 0);
+    }
+
+    function renderRemuneration() {
+      el('remunerationTable').innerHTML = state.users.map(user => {
+        const config = state.remuneration[user.id] || { percentage: 0, bonus: 0 };
+        const revenue = userRevenue(user.id);
+        const calculatedPay = Math.round(revenue * config.percentage / 100 + config.bonus * 100) / 100;
+        return `<tr><td><span class="avatar">${user.initial}</span> <b>${user.name}</b></td><td>${user.role}</td>
+          <td><input class="stock-input" style="max-width: 80px;" data-remu-percent="${user.id}" type="number" min="0" max="100" step="0.5" value="${config.percentage}"></td>
+          <td><input class="stock-input" style="max-width: 80px;" data-remu-bonus="${user.id}" type="number" min="0" step="1" value="${config.bonus}"></td>
+          <td class="order-total">${money(revenue)}</td>
+          <td class="order-total" style="color: #a6d686; font-weight: 750;">${money(calculatedPay)}</td>
+          <td><button class="btn small" data-save-remu="${user.id}">✓ Valider</button></td></tr>`;
+      }).join('');
+    }
+
+    function renderAll() {
+      saveState();
+      renderLoginUsers();
+      renderSale();
+      renderDashboard();
+      renderOrders();
+      renderDays();
+      renderAdmin();
+      renderRemuneration();
+    }
+    function isAdmin() { return state.user.role === 'Administrateur'; }
+    function applyRoleAccess() { document.querySelectorAll('.admin-only').forEach(item => item.classList.toggle('hidden', !isAdmin())); }
+    function showView(view) { if (view === 'admin' && !isAdmin()) { toast('Seul un administrateur peut accéder aux réglages.', true); view = 'sale'; } state.activeView = view; document.querySelectorAll('.view').forEach(item => item.classList.toggle('active', item.id === view + 'View')); document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === view)); }
+    function toast(message, isError = false) { const node = el('toast'); node.textContent = (isError ? '⚠ ' : '✓ ') + message; node.classList.toggle('error', isError); node.classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove('show'), 2800); }
+    function closeModal() { el('modalBackdrop').classList.add('hidden'); }
+    function showModal(content) { el('modalContent').innerHTML = content; el('modalBackdrop').classList.remove('hidden'); }
+
+    function openConfirm() {
+      const entries = cartEntries(); if (!entries.length) return;
+      showModal(`<div class="modal-symbol">☘</div><h3>Confirmer la commande ?</h3><p>La vente sera enregistrée immédiatement dans l’historique.</p><div class="modal-summary">${entries.map(({product, qty}) => `<div><span>${qty} × ${product.name}</span><b>${money(product.price * qty)}</b></div>`).join('')}<div><span>Total · ${state.payment}</span><b>${money(cartTotal())}</b></div></div><div class="modal-actions"><button class="btn ghost" data-modal-close>Retour</button><button class="btn" id="saveOrder">Valider la vente</button></div>`);
+    }
+    function saveOrder() {
+      const entries = cartEntries(); if (!entries.length) return;
+      if (entries.some(({product, qty}) => !product.active || qty > product.stock)) { closeModal(); renderSale(); toast('Le stock disponible a changé. Vérifiez la commande.', true); return; }
+      const number = Math.max(...state.orders.map(order => Number(order.id.replace('C-', ''))), 1047) + 1;
+      const order = { id: `C-${number}`, day: isoToday, time: timeNow(), seller: state.user.name, items: entries.map(({product, qty}) => ({productId: product.id, qty, unitPrice: product.price})), payment: state.payment, status: 'valid' };
+      entries.forEach(({product, qty}) => { product.stock -= qty; });
+      state.orders.unshift(order); state.cart = {}; closeModal(); renderAll(); showView('sale'); toast(`Commande ${order.id} enregistrée — ${money(orderTotal(order))}`);
+    }
+    function cancelOrder(id) {
+      const order = state.orders.find(item => item.id === id); if (!order || order.status === 'cancelled') return;
+      showModal(`<div class="modal-symbol" style="color:#d68173">×</div><h3>Annuler ${order.id} ?</h3><p>Le montant sera retiré automatiquement du chiffre d’affaires et des statistiques de la journée.</p><div class="modal-summary"><div><span>Montant à annuler</span><b>${money(orderTotal(order))}</b></div></div><div class="modal-actions"><button class="btn ghost" data-modal-close>Garder la vente</button><button class="btn danger" data-confirm-cancel="${order.id}">Annuler la commande</button></div>`);
+    }
+    function toggleDay() {
+      const current = state.days.find(day => day.date === isoToday);
+      if (state.dayOpen) {
+        showModal(`<div class="modal-symbol">◈</div><h3>Clôturer la journée ?</h3><p>Le récapitulatif sera figé. Vous pourrez toujours consulter l’historique.</p><div class="modal-summary"><div><span>CA final</span><b>${money(dailyStats().total)}</b></div><div><span>Commandes validées</span><b>${dailyStats().orders.length}</b></div></div><div class="modal-actions"><button class="btn ghost" data-modal-close>Retour</button><button class="btn" data-confirm-day>Clôturer</button></div>`);
+      } else { state.dayOpen = true; current.closed = null; renderAll(); toast('Journée rouverte.'); }
+    }
+
+    el('loginForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const selectedId = Number(el('loginUser').value);
+      const pin = el('loginPin').value;
+      const user = state.users.find(item => item.id === selectedId);
+      if (!user || String(pin) !== String(user.pin)) { toast('Code PIN incorrect. Réessayez.', true); return; }
+      state.user = user; el('currentUser').textContent = user.name; el('currentRole').textContent = user.role; el('avatar').textContent = user.initial; applyRoleAccess(); el('loginScreen').classList.add('hidden'); el('appScreen').classList.remove('hidden'); renderAll();
+    });
+    document.querySelectorAll('.nav-item').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+    el('productGrid').addEventListener('click', event => { const button = event.target.closest('[data-step]'); if (!button) return; const id = Number(button.dataset.product); const product = getProduct(id); const nextQty = (state.cart[id] || 0) + (button.dataset.step === 'plus' ? 1 : -1); if (!product.active || nextQty > product.stock) return; state.cart[id] = Math.max(0, nextQty); renderSale(); });
+    el('mobileCartBar').addEventListener('click', () => el('cartPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    document.querySelectorAll('.pay-option').forEach(button => button.addEventListener('click', () => { state.payment = button.dataset.payment; document.querySelectorAll('.pay-option').forEach(item => item.classList.toggle('active', item === button)); }));
+    el('confirmOrder').addEventListener('click', openConfirm);
+    el('modalBackdrop').addEventListener('click', event => {
+      if (event.target === el('modalBackdrop') || event.target.closest('[data-modal-close]')) closeModal();
+      if (event.target.closest('#saveOrder')) saveOrder();
+      const cancel = event.target.closest('[data-confirm-cancel]');
+      if (cancel) {
+        const order = state.orders.find(item => item.id === cancel.dataset.confirmCancel);
+        order.status = 'cancelled';
+        order.items.forEach(line => { const product = getProduct(line.productId); if (product) product.stock += line.qty; });
+        closeModal(); renderAll(); toast(`${order.id} a été annulée. Le stock et les statistiques ont été corrigés.`);
+      }
+      if (event.target.closest('[data-confirm-day]')) { state.dayOpen = false; state.days.find(day => day.date === isoToday).closed = timeNow(); closeModal(); renderAll(); toast('Journée clôturée avec succès.'); }
+    });
+    el('orderFilter').addEventListener('change', renderOrders);
+    el('ordersTable').addEventListener('click', event => { const button = event.target.closest('[data-cancel]'); if (button) cancelOrder(button.dataset.cancel); });
+    el('dayAction').addEventListener('click', toggleDay); el('openCloseDay').addEventListener('click', toggleDay);
+    el('drinkForm').addEventListener('submit', event => { event.preventDefault(); if (!isAdmin()) return; const name = el('drinkName').value.trim(); const price = Number(el('drinkPrice').value); const stock = Number(el('drinkStock').value); if (!name || price <= 0 || stock < 0) return; state.products.push({ id: Date.now(), name, price, stock, icon: '🥂', active: true }); event.target.reset(); renderAll(); toast(`${name} a été ajoutée à la carte.`); });
+    el('drinksList').addEventListener('click', event => { if (!isAdmin()) return; const toggle = event.target.closest('[data-toggle-drink]'); const edit = event.target.closest('[data-edit-drink]'); if (toggle) { const product = getProduct(toggle.dataset.toggleDrink); product.active = !product.active; renderAll(); toast(`${product.name} est ${product.active ? 'à nouveau disponible' : 'désactivée'}.`); } if (edit) { const product = getProduct(edit.dataset.editDrink); const next = prompt(`Nouveau prix pour ${product.name} (en $)`, product.price); if (next && Number(next) > 0) { product.price = Number(next); renderAll(); toast(`Prix de ${product.name} mis à jour.`); } } });
+    el('stockList').addEventListener('click', event => { if (!isAdmin()) return; const button = event.target.closest('[data-restock]'); if (!button) return; const product = getProduct(button.dataset.restock); const input = el('stockList').querySelector(`[data-stock-input="${product.id}"]`); const quantity = Number(input.value); if (!Number.isInteger(quantity) || quantity <= 0) { toast('Saisissez une quantité entière supérieure à zéro.', true); return; } product.stock += quantity; renderAll(); toast(`${quantity} unité${quantity > 1 ? 's' : ''} ajoutée${quantity > 1 ? 's' : ''} au stock de ${product.name}.`); });
+    el('roleForm').addEventListener('submit', event => { event.preventDefault(); if (!isAdmin()) return; const name = el('newRoleName').value.trim(); if (!name) { toast('Saisissez un nom de rôle.', true); return; } const clean = name.trim(); if (state.roles.some(role => role.toLowerCase() === clean.toLowerCase())) { toast('Ce rôle existe déjà.', true); return; } state.roles.push(clean); el('newRoleName').value = ''; renderAll(); toast(`Le rôle ${clean} a été ajouté.`); });
+    el('rolesList').addEventListener('click', event => { if (!isAdmin()) return; const button = event.target.closest('[data-delete-role]'); if (!button) return; const role = button.dataset.deleteRole; if (state.roles.length <= 1) { toast('Il faut conserver au moins un rôle.', true); return; } const usersWithRole = state.users.filter(user => user.role === role).length; if (usersWithRole) { state.users = state.users.map(user => ({ ...user, role: user.role === role ? state.roles.find(item => item !== role) || state.roles[0] : user.role })); } state.roles = state.roles.filter(item => item !== role); renderAll(); toast(`Le rôle ${role} a été supprimé.`); });
+    el('userForm').addEventListener('submit', event => { event.preventDefault(); if (!isAdmin()) return; const name = el('newUserName').value.trim(); const pin = el('newUserPin').value; const role = el('newUserRole').value; if (!name || !/^\d{4}$/.test(pin)) { toast('Saisissez un nom et un PIN de 4 chiffres.', true); return; } if (!state.roles.includes(role)) { toast('Sélectionnez un rôle valide.', true); return; } state.users.push({ id: Date.now(), name, role, pin, initial: name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase() || name[0].toUpperCase() }); event.target.reset(); renderAll(); toast(`Compte de ${name} créé.`); });
+    el('usersList').addEventListener('click', event => { if (!isAdmin()) return; const edit = event.target.closest('[data-edit-user]'); const del = event.target.closest('[data-delete-user]'); if (edit) { const user = state.users.find(item => item.id === Number(edit.dataset.editUser)); if (!user) return; const nextName = prompt(`Nom complet pour ${user.name}`, user.name); if (nextName === null) return; const trimmedName = nextName.trim(); if (!trimmedName) { toast('Le nom ne peut pas être vide.', true); return; } const roleChoices = state.roles.join(', ');
+      const nextRole = prompt(`Rôle pour ${trimmedName} (${roleChoices})`, user.role); if (nextRole === null) return; const cleanRole = nextRole.trim(); if (!state.roles.includes(cleanRole)) { toast('Le rôle sélectionné n’existe pas.', true); return; } const nextPin = prompt(`Nouveau PIN à 4 chiffres pour ${trimmedName}`, user.pin); if (nextPin === null) return; if (!/^\d{4}$/.test(nextPin)) { toast('Le PIN doit comporter 4 chiffres.', true); return; } user.name = trimmedName; user.role = cleanRole; user.pin = nextPin; user.initial = trimmedName.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase() || trimmedName[0].toUpperCase(); renderAll(); toast(`Profil de ${trimmedName} mis à jour.`); return; } if (del) { const user = state.users.find(item => item.id === Number(del.dataset.deleteUser)); if (!user) return; const confirmDelete = confirm(`Supprimer l’utilisateur ${user.name} ?`); if (!confirmDelete) return; state.users = state.users.filter(item => item.id !== Number(del.dataset.deleteUser)); if (state.user && state.user.id === user.id) { state.user = { ...structuredClone(defaultState.user) }; } renderAll(); toast(`${user.name} a été supprimé.`); } });
+    el('passwordHint').addEventListener('click', () => toast('Utilisez le bouton ✎ pour modifier le nom, le rôle ou le PIN d’un compte.'));    el('remunerationTable').addEventListener('click', event => {
+      if (!isAdmin()) return;
+      const button = event.target.closest('[data-save-remu]');
+      if (!button) return;
+      const userId = Number(button.dataset.saveRemu);
+      const percent = Number(el('remunerationTable').querySelector(`[data-remu-percent="${userId}"]`).value) || 0;
+      const bonus = Number(el('remunerationTable').querySelector(`[data-remu-bonus="${userId}"]`).value) || 0;
+      if (percent < 0 || percent > 100 || bonus < 0) { toast('Valeurs invalides. Le % doit être entre 0 et 100, et la prime positive.', true); return; }
+      state.remuneration[userId] = { percentage: percent, bonus };
+      renderAll();
+      toast(`Rémunération de ${state.users.find(u => u.id === userId)?.name} mise à jour.`);
+    });    el('todayLabel').textContent = frenchDate.format(today);
+    renderLoginUsers();
+    void hydrateState();
+  </script>
+</body>
+</html>
