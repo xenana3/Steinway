@@ -1,13 +1,9 @@
-functionsDirectory = "/workspaces/netlify/netlify/functions"
-functionsDirectoryOrigin = "config-v1"
-plugins = []
-headers = []
-redirects = []
+publish = "."
+functions = "function"
 
 [build]
-publish = "/workspaces/netlify"
-publishOrigin = "config"
-functions = "/workspaces/netlify/netlify/functions"
+  command = "echo 'Build complete'"
+  publish = "."
 
   [build.environment]
 
