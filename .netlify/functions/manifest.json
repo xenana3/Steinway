@@ -1,1 +1,0 @@
-{"functions":[{"bundler":"zisi","buildData":{"runtimeAPIVersion":1},"mainFile":"/workspaces/Steinway/netlify/function/data.js","name":"data","priority":10,"runtimeVersion":"nodejs24.x","path":"/workspaces/Steinway/.netlify/functions/data.zip","runtime":"js"}],"system":{"arch":"x64","platform":"linux"},"timestamp":1788191124299,"version":1}
