@@ -180,6 +180,7 @@
     h2 { margin: 0; color: var(--gold-light); font: 700 clamp(1.7rem, 3.2vw, 2.25rem)/1 Georgia, "Times New Roman", serif; letter-spacing: .01em; }
     .page-desc { margin: 8px 0 0; color: var(--muted); font-size: .88rem; }
     .date-chip { padding: 9px 12px; color: var(--gold-light); border: 1px solid var(--line); border-radius: 99px; background: rgba(0,0,0,.16); white-space: nowrap; font-size: .76rem; }
+    .remuneration-inline { margin-top: 18px; }
 
     /* Vente */
     .sale-layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 24px; align-items: start; }
@@ -395,7 +396,6 @@
         <input class="pin" id="loginPin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" aria-label="Code PIN">
       </div>
       <button class="btn full" type="submit">Se connecter</button>
-      <p class="login-note">Démo : admin <b>1234</b> · Manon <b>2468</b> · Harry <b>8642</b> · Raven <b>8642</b></p>
     </form>
   </section>
 
@@ -426,7 +426,6 @@
         <button class="nav-item" data-view="days"><span>◫</span>Journées</button>
         <div class="nav-divider admin-only" id="settingsDivider"></div>
         <p class="nav-label admin-only" id="settingsLabel">Réglages</p>
-        <button class="nav-item admin-only" id="remunNav" data-view="remuneration"><span>💰</span>Rémunération</button>
         <button class="nav-item admin-only" id="adminNav" data-view="admin"><span>⚙</span>Administration</button>
         <div class="nav-day">
           <small>Journée en cours</small>
@@ -470,6 +469,10 @@
         <section class="view" id="dashboardView">
           <div class="page-head"><div><p class="eyebrow">Vue d'ensemble</p><h2>Tableau de bord</h2><p class="page-desc">Les chiffres se mettent à jour à chaque commande ou annulation.</p></div><div class="date-chip">Aujourd’hui</div></div>
           <div class="stats-grid" id="statsGrid"></div>
+          <section class="panel dashboard-panel remuneration-inline">
+            <div class="panel-head"><h3>Rémunération par utilisateur</h3><span>CA · primes · paiement estimé</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>% du CA</th><th>Prime fixe ($)</th><th>CA généré</th><th>Rémunération estimée</th></tr></thead><tbody id="dashboardRemunerationTable"></tbody></table></div>
+          </section>
           <div class="dash-grid">
             <section class="panel dashboard-panel"><h3>Chiffre d’affaires par boisson</h3><p class="help">Commandes validées de la journée.</p><div id="revenueBars"></div></section>
             <section class="panel dashboard-panel"><h3>Meilleures ventes</h3><p class="help">Classement par quantités vendues.</p><ol class="top-sales" id="topSales"></ol></section>
@@ -512,7 +515,8 @@
           <section class="panel admin-section" style="max-width:none"><h3>Configuration des rémunérations</h3><p>Saisissez le pourcentage du chiffre d'affaires à verser à chaque membre de l'équipe.</p>
             <div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>% du CA</th><th>Prime fixe ($)</th><th>CA généré</th><th>Rémunération estimée</th><th>Action</th></tr></thead><tbody id="remunerationTable"></tbody></table></div>
           </section>
-        </section>      </div>
+        </section>
+      </div>
     </div>
   </main>
 
@@ -761,17 +765,27 @@
     }
 
     function renderRemuneration() {
-      el('remunerationTable').innerHTML = state.users.map(user => {
+      const rows = state.users.map(user => {
         const config = state.remuneration[user.id] || { percentage: 0, bonus: 0 };
         const revenue = userRevenue(user.id);
         const calculatedPay = Math.round(revenue * config.percentage / 100 + config.bonus * 100) / 100;
-        return `<tr><td><span class="avatar">${user.initial}</span> <b>${user.name}</b></td><td>${user.role}</td>
+        const values = `<tr><td><span class="avatar">${user.initial}</span> <b>${user.name}</b></td><td>${user.role}</td>
           <td><input class="stock-input" style="max-width: 80px;" data-remu-percent="${user.id}" type="number" min="0" max="100" step="0.5" value="${config.percentage}"></td>
           <td><input class="stock-input" style="max-width: 80px;" data-remu-bonus="${user.id}" type="number" min="0" step="1" value="${config.bonus}"></td>
           <td class="order-total">${money(revenue)}</td>
           <td class="order-total" style="color: #a6d686; font-weight: 750;">${money(calculatedPay)}</td>
           <td><button class="btn small" data-save-remu="${user.id}">✓ Valider</button></td></tr>`;
+        return values;
       }).join('');
+
+      const tableTarget = document.getElementById('dashboardRemunerationTable');
+      if (tableTarget) {
+        tableTarget.innerHTML = rows.replace(/<td><button class="btn small" data-save-remu="(\d+)">✓ Valider<\/button><\/td><\/tr>/g, '').replace(/<\/tr><\/tr>/g, '</tr>');
+      }
+      const regularTable = document.getElementById('remunerationTable');
+      if (regularTable) {
+        regularTable.innerHTML = rows;
+      }
     }
 
     function renderAll() {

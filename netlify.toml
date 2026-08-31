@@ -1,24 +1,8 @@
 publish = "netlify"
-functions = "netlify/function"
 
 [build]
   command = "echo 'Build complete'"
   publish = "netlify"
 
-  [build.environment]
-
-  [build.processing]
-
-    [build.processing.css]
-
-    [build.processing.html]
-
-    [build.processing.images]
-
-    [build.processing.js]
-
-  [build.services]
-
 [functions]
-
-  [functions."*"]
+  directory = "netlify/function"
