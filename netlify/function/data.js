@@ -1,6 +1,16 @@
-const { getStore } = require('@netlify/blobs');
+let store = null;
 
-const store = getStore({ name: 'steinway-data' });
+try {
+  const { getStore } = require('@netlify/blobs');
+  store = getStore({ name: 'steinway-data' });
+} catch (error) {
+  console.warn('Netlify Blobs indisponible, stockage partagé désactivé:', error.message);
+  store = {
+    async get() { return null; },
+    async set() { return true; },
+    async delete() { return true; }
+  };
+}
 
 const sendJson = (body, statusCode = 200) => ({
   statusCode,
